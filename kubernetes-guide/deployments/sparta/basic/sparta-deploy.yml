@@ -17,13 +17,6 @@ spec:
           image: haashim1/haashim-node-website:latest # replace with the actual image name
           ports:
             - containerPort: 3000
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 200m
-              memory: 256Mi
           env:
             - name: DB_HOST
               value: "mongodb://sparta-db-service:27017/posts" # Changed from DB_HOST=mongodb://...
@@ -35,7 +28,7 @@ kind: Deployment
 metadata:
   name: sparta-db-deployment
 spec:
-  replicas: 1  # Changed from 3 to 1 since we're using ReadWriteOnce PV
+  replicas: 3
   selector:
     matchLabels:
       app: sparta-db
@@ -49,10 +42,3 @@ spec:
           image: mongo:latest
           ports:
             - containerPort: 27017
-          volumeMounts:
-            - name: mongodb-data
-              mountPath: /data/db
-      volumes:
-        - name: mongodb-data
-          persistentVolumeClaim:
-            claimName: sparta-db-pvc

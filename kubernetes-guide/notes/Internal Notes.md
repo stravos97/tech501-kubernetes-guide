@@ -436,7 +436,7 @@ Follow these steps to test data persistence:
    MONGO_POD=$(kubectl get pod -l app=sparta-db -o jsonpath='{.items[0].metadata.name}')
    
    # Check the data in MongoDB
-   kubectl exec -it $MONGO_POD -- mongo --eval 'db.posts.find().pretty()'
+   kubectl exec -it $MONGO_POD -- mongosh --eval 'db.posts.find().pretty()'
    ```
 
 4. **Delete all the application pods to force recreation**:

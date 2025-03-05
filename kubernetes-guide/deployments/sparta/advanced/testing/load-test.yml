@@ -1,0 +1,47 @@
+# One-time Apache Bench test
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-generator-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+      - name: load-generator
+        image: devth/alpine-bench
+        args:
+        - "-n"  # Number of requests
+        - "1000"
+        - "-c"  # Concurrency
+        - "20"
+        - "http://sparta-node-service:3000"
+      restartPolicy: Never
+  backoffLimit: 1
+---
+# Continuous load generator using busybox for reliability
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: continuous-load-generator
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: continuous-load-generator
+  template:
+    metadata:
+      labels:
+        app: continuous-load-generator
+    spec:
+      containers:
+      - name: load-generator
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+        - while true; do
+            wget -q -O- http://sparta-node-service:3000;
+            sleep 0.01;
+          done
