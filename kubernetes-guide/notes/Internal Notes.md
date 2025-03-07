@@ -657,3 +657,36 @@ echo "- Kubernetes dashboard: minikube dashboard"
 kubectl config use-context minikube
 kubectl get nodes
 ```
+
+
+Minikube dashboard setup
+
+```bash
+ssh ubuntu@3.249.21.175 "pkill -f 'kubectl proxy' || true && kubectl proxy --address='0.0.0.0' --port=3000 --accept-hosts='.*' &"
+ssh ubuntu@3.249.21.175 "ps aux | grep 'kubectl proxy' | grep -v grep"
+ssh ubuntu@3.249.21.175 "kubectl proxy --address='0.0.0.0' --port=3000 --accept-hosts='.*'"
+```
+
+The Kubernetes dashboard is now accessible from your local machine!
+
+I've set up the kubectl proxy on your EC2 instance to listen on port 3000 (which is already open in your security group) and accept connections from any host.
+
+You can access the Kubernetes dashboard by opening the following URL in your web browser:
+
+[http://3.249.21.175:3000/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/](http://3.249.21.175:3000/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/)
+
+This works because:
+
+1. The proxy is running on port 3000, which is already allowed in your security group
+2. It's bound to 0.0.0.0, which means it accepts connections from any network interface
+3. The --accept-hosts='.*' flag allows connections from any hostname
+
+The proxy is currently running in your terminal. If you want to stop it, press Ctrl+C in the terminal where it's running.
+
+If you want to run it in the background so it continues running after you close your SSH session, you can use:
+
+```bash
+ssh ubuntu@3.249.21.175 "nohup kubectl proxy --address='0.0.0.0' --port=3000 --accept-hosts='.*' > /dev/null 2>&1 &"
+```
+
+This will keep the proxy running even after you close your SSH connection.
