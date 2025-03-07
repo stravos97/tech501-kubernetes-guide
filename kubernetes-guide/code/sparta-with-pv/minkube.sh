@@ -169,15 +169,93 @@ fi
 echo "Minikube status:"
 minikube status
 
-# Step 8: Basic commands
+# Step 8: Setup Kubernetes Dashboard with external access
+
+# Refresh the dashboard addon (disable and re-enable)
+echo "Setting up the Kubernetes dashboard addon..."
+if minikube addons list | grep -q "dashboard: enabled"; then
+  echo "Dashboard addon already enabled - disabling it first for a clean setup..."
+  minikube addons disable dashboard
+fi
+
+echo "Enabling the Kubernetes dashboard addon..."
+minikube addons enable dashboard
+
+# Get the EC2 public IP address
+echo "Determining the EC2 public IP address..."
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+if [ -z "$PUBLIC_IP" ]; then
+  echo "Could not automatically determine the EC2 public IP."
+  read -p "Please enter the public IP address of this EC2 instance: " PUBLIC_IP
+  
+  if [ -z "$PUBLIC_IP" ]; then
+    echo "No IP address provided. Skipping dashboard external access setup."
+  fi
+else
+  echo "Detected EC2 public IP: $PUBLIC_IP"
+fi
+
+# Set up the kubectl proxy systemd service for external access
+if [ -n "$PUBLIC_IP" ]; then
+  echo "Setting up the kubectl proxy as a systemd service for dashboard access..."
+  
+  # Create the systemd service file
+  sudo bash -c "cat > /etc/systemd/system/kubectl-proxy.service << EOF
+[Unit]
+Description=Kubernetes Dashboard Proxy Service
+After=network.target
+
+[Service]
+User=$USER
+ExecStart=/usr/local/bin/kubectl proxy --address='0.0.0.0' --port=8001 --accept-hosts='.*'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+  # Reload systemd, then stop, enable and restart the service
+  sudo systemctl daemon-reload
+  
+  # Stop the service if it's already running
+  if sudo systemctl is-active --quiet kubectl-proxy.service; then
+    echo "Stopping existing kubectl proxy service..."
+    sudo systemctl stop kubectl-proxy.service
+  fi
+  
+  # Enable and start the service
+  sudo systemctl enable kubectl-proxy.service
+  sudo systemctl start kubectl-proxy.service
+  
+  # Check if the service started successfully
+  if sudo systemctl is-active --quiet kubectl-proxy.service; then
+    echo "Kubectl proxy service started successfully."
+    
+    echo ""
+    echo "===================================================="
+    echo "Kubernetes Dashboard is now accessible at:"
+    echo "http://$PUBLIC_IP:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/"
+    echo ""
+    echo "⚠️ SECURITY WARNING: This setup allows anyone to access your Kubernetes dashboard."
+    echo "For production environments, consider implementing proper authentication."
+    echo "===================================================="
+  else
+    echo "Failed to start the kubectl proxy service. Please check the logs:"
+    sudo systemctl status kubectl-proxy.service
+  fi
+fi
+
+# Step 9: Basic commands
 echo ""
 echo "Basic Minikube commands:"
 echo "- Check status: minikube status"
 echo "- Stop cluster: minikube stop"
 echo "- Delete cluster: minikube delete"
-echo "- Kubernetes dashboard: minikube dashboard"
+echo "- Kubernetes dashboard (locally): minikube dashboard"
 
-# Step 9: Configure kubectl to use Minikube (idempotent by default)
+# Step 10: Configure kubectl to use Minikube (idempotent by default)
 echo ""
 echo "Configuring kubectl to use Minikube:"
 kubectl config use-context minikube
@@ -185,3 +263,11 @@ kubectl get nodes
 
 echo ""
 echo "Minikube setup completed successfully."
+
+# Add security reminder if dashboard is exposed
+if [ -n "$PUBLIC_IP" ]; then
+  echo ""
+  echo "⚠️ REMINDER: Your Kubernetes dashboard is publicly accessible at:"
+  echo "http://$PUBLIC_IP:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/"
+  echo "Make sure your EC2 security group allows inbound traffic on port 8001 TCP."
+fi
