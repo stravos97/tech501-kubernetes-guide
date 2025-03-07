@@ -71,13 +71,13 @@ if [ -z "$LOADBALANCER_IP" ]; then
     exit 1
 fi
 
-# Get the LoadBalancer IP of the service (already retrieved above)
-echo "Using LoadBalancer IP for nginx configuration..."
-echo "LoadBalancer IP: $LOADBALANCER_IP"
+# We're now using kubernetes.docker.internal in the nginx config
+# This hostname only works when minikube tunnel is running
+echo "Using kubernetes.docker.internal in nginx config (requires minikube tunnel)"
+echo "LoadBalancer IP for reference: $LOADBALANCER_IP"
 
-# Replace the placeholder in the nginx config with the actual LoadBalancer IP
+# No need to replace any placeholder in the nginx config
 echo "Configuring nginx..."
-ssh ubuntu@3.252.122.163 "sed -i \"s/LOADBALANCER_IP/$LOADBALANCER_IP/g\" ~/nginx-config-lb"
 
 # Install nginx if not already installed
 ssh ubuntu@3.252.122.163 "if ! command -v nginx &> /dev/null; then

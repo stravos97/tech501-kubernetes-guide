@@ -16,8 +16,8 @@ server {
     server_name _;
 
     location / {
-        # This will be replaced with the LoadBalancer's ClusterIP and port by the deploy script
-        proxy_pass http://LOADBALANCER_IP:9000;
+        # This will only work when minikube tunnel is running
+        proxy_pass http://kubernetes.docker.internal:9000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
