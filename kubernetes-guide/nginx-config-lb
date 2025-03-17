@@ -16,6 +16,7 @@ server {
     server_name _;
 
     location / {
+        # The proxy pass IP will be the external IP
         # This will only work when minikube tunnel is running
         proxy_pass http://kubernetes.docker.internal:9000;
         proxy_set_header Host $host;

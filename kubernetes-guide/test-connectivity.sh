@@ -4,7 +4,7 @@
 # with and without minikube tunnel
 
 # Set the VM IP address
-VM_IP="3.252.122.163"
+VM_IP="52.16.191.37"
 
 echo "===================================================="
 echo "TESTING APP2-SERVICE CONNECTIVITY (PORT 9000)"
