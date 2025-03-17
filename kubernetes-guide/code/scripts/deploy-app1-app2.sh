@@ -1,40 +1,44 @@
 #!/bin/bash
 
+# Source configuration
+source ../config/config.env
+REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
+
 # First, check if Minikube is running on the VM
 echo "Checking if Minikube is running on the VM..."
-MINIKUBE_STATUS=$(ssh ubuntu@52.16.191.37 "minikube status | grep -c 'host: Running'")
+MINIKUBE_STATUS=$(ssh $REMOTE_SERVER "minikube status | grep -c 'host: Running'")
 
 if [ "$MINIKUBE_STATUS" -ne 1 ]; then
     echo "Error: Minikube is not running on the VM. Please start it first."
-    echo "You can start it by running: ssh ubuntu@52.16.191.37 'minikube start'"
+    echo "You can start it by running: ssh $REMOTE_SERVER 'minikube start'"
     exit 1
 fi
 
 echo "Minikube is running. Proceeding with deployment..."
 
 # Create directories on the VM
-ssh ubuntu@52.16.191.37 "mkdir -p ~/app1 ~/app2"
+ssh $REMOTE_SERVER "mkdir -p ~/app1 ~/app2"
 
 # Copy files to the VM
-scp code/app1/app1-deploy.yml code/app1/app1-service.yml ubuntu@52.16.191.37:~/app1/
-scp code/app2/app2-deploy.yml code/app2/app2-service.yml ubuntu@52.16.191.37:~/app2/
-scp code/config/nginx-config-lb ubuntu@52.16.191.37:~/nginx-config-lb
+scp code/app1/app1-deploy.yml code/app1/app1-service.yml $REMOTE_SERVER:~/app1/
+scp code/app2/app2-deploy.yml code/app2/app2-service.yml $REMOTE_SERVER:~/app2/
+scp code/config/nginx-config-lb $REMOTE_SERVER:~/nginx-config-lb
 
 # Apply the Kubernetes manifests on the VM
 echo "Applying Kubernetes manifests..."
-ssh ubuntu@52.16.191.37 "kubectl apply -f ~/app1/app1-deploy.yml"
-ssh ubuntu@52.16.191.37 "kubectl apply -f ~/app1/app1-service.yml"
-ssh ubuntu@52.16.191.37 "kubectl apply -f ~/app2/app2-deploy.yml"
-ssh ubuntu@52.16.191.37 "kubectl apply -f ~/app2/app2-service.yml"
+ssh $REMOTE_SERVER "kubectl apply -f ~/app1/app1-deploy.yml"
+ssh $REMOTE_SERVER "kubectl apply -f ~/app1/app1-service.yml"
+ssh $REMOTE_SERVER "kubectl apply -f ~/app2/app2-deploy.yml"
+ssh $REMOTE_SERVER "kubectl apply -f ~/app2/app2-service.yml"
 
 # Kill any existing minikube tunnel processes
 echo "Stopping any existing minikube tunnel processes..."
-ssh ubuntu@52.16.191.37 "pkill -f 'minikube tunnel' || true"
+ssh $REMOTE_SERVER "pkill -f 'minikube tunnel' || true"
 
 # Start minikube tunnel in the background but capture output to a log file
 echo "Starting minikube tunnel..."
-ssh ubuntu@52.16.191.37 "nohup minikube tunnel > minikube_tunnel.log 2>&1 &"
-ssh ubuntu@52.16.191.37 "echo 'Minikube tunnel started with PID: \$(pgrep -f \"minikube tunnel\")'"
+ssh $REMOTE_SERVER "nohup minikube tunnel > minikube_tunnel.log 2>&1 &"
+ssh $REMOTE_SERVER "echo 'Minikube tunnel started with PID: \$(pgrep -f \"minikube tunnel\")'"
 
 # Give the tunnel a moment to initialize
 echo "Waiting for tunnel to initialize..."
@@ -47,7 +51,7 @@ MAX_ATTEMPTS=30
 LOADBALANCER_IP=""
 
 while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-    LOADBALANCER_IP=$(ssh ubuntu@52.16.191.37 "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'")
+    LOADBALANCER_IP=$(ssh $REMOTE_SERVER "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'")
     if [ -n "$LOADBALANCER_IP" ]; then
         echo "LoadBalancer IP: $LOADBALANCER_IP"
         break
@@ -58,7 +62,7 @@ while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
     # If we're on the 5th attempt, check the tunnel log for any issues
     if [ $ATTEMPTS -eq 5 ]; then
         echo "Checking minikube tunnel log:"
-        ssh ubuntu@52.16.191.37 "cat minikube_tunnel.log"
+        ssh $REMOTE_SERVER "cat minikube_tunnel.log"
     fi
     
     sleep 2
@@ -67,7 +71,7 @@ done
 if [ -z "$LOADBALANCER_IP" ]; then
     echo "Error: Failed to get LoadBalancer IP after $MAX_ATTEMPTS attempts."
     echo "Final minikube tunnel log:"
-    ssh ubuntu@52.16.191.37 "cat minikube_tunnel.log"
+    ssh $REMOTE_SERVER "cat minikube_tunnel.log"
     exit 1
 fi
 
@@ -80,18 +84,18 @@ echo "LoadBalancer IP for reference: $LOADBALANCER_IP"
 echo "Configuring nginx..."
 
 # Install nginx if not already installed
-ssh ubuntu@52.16.191.37 "if ! command -v nginx &> /dev/null; then
+ssh $REMOTE_SERVER "if ! command -v nginx &> /dev/null; then
     sudo apt-get update
     sudo apt-get install -y nginx
 fi"
 
 # Configure nginx
-ssh ubuntu@52.16.191.37 "sudo cp ~/nginx-config-lb /etc/nginx/sites-available/default"
+ssh $REMOTE_SERVER "sudo cp ~/nginx-config-lb /etc/nginx/sites-available/default"
 echo "Testing nginx configuration..."
-ssh ubuntu@52.16.191.37 "sudo nginx -t && sudo systemctl restart nginx"
+ssh $REMOTE_SERVER "sudo nginx -t && sudo systemctl restart nginx"
 
 # Check the status of the deployments
 echo "Checking deployment status:"
-ssh ubuntu@52.16.191.37 "kubectl get deployments"
+ssh $REMOTE_SERVER "kubectl get deployments"
 echo "Checking service status:"
-ssh ubuntu@52.16.191.37 "kubectl get services"
+ssh $REMOTE_SERVER "kubectl get services"

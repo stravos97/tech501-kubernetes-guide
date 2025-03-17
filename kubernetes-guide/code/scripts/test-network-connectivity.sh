@@ -3,8 +3,9 @@
 # Test script to check connectivity to app2-service on port 9000
 # with and without minikube tunnel
 
-# Set the VM IP address
-VM_IP="52.16.191.37"
+# Source configuration
+source ../config/config.env
+VM_IP="${REMOTE_SERVER_IP}"
 
 echo "===================================================="
 echo "TESTING APP2-SERVICE CONNECTIVITY (PORT 9000)"
@@ -15,20 +16,20 @@ echo -e "\n===== TESTING WITHOUT MINIKUBE TUNNEL ====="
 
 # Stop any existing tunnel
 echo "Stopping any existing minikube tunnel..."
-ssh ubuntu@$VM_IP "pkill -f 'minikube tunnel' || true"
+ssh ${REMOTE_USER}@$VM_IP "pkill -f 'minikube tunnel' || true"
 sleep 3
 
 # Get service information
 echo -e "\nService information without tunnel:"
-ssh ubuntu@$VM_IP "kubectl get service app2-service -o wide"
+ssh ${REMOTE_USER}@$VM_IP "kubectl get service app2-service -o wide"
 
 # Get minikube IP
-MINIKUBE_IP=$(ssh ubuntu@$VM_IP "minikube ip")
+MINIKUBE_IP=$(ssh ${REMOTE_USER}@$VM_IP "minikube ip")
 echo -e "\nMinikube IP: $MINIKUBE_IP"
 
 # Try direct NodePort access
 echo -e "\nTesting NodePort access (port 30002)..."
-NODE_PORT_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$MINIKUBE_IP:30002 || echo 'Failed'")
+NODE_PORT_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$MINIKUBE_IP:30002 || echo 'Failed'")
 if [[ "$NODE_PORT_STATUS" == "200" ]]; then
     echo "✅ NodePort access successful (HTTP $NODE_PORT_STATUS)"
 else
@@ -37,13 +38,13 @@ fi
 
 # Try LoadBalancer access
 echo -e "\nTesting LoadBalancer access (port 9000)..."
-LB_IP=$(ssh ubuntu@$VM_IP "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo ''")
+LB_IP=$(ssh ${REMOTE_USER}@$VM_IP "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo ''")
 
 if [[ -z "$LB_IP" ]]; then
     echo "❌ No LoadBalancer IP assigned (expected without tunnel)"
     LB_STATUS="Failed (No IP)"
 else
-    LB_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$LB_IP:9000 || echo 'Failed'")
+    LB_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$LB_IP:9000 || echo 'Failed'")
     if [[ "$LB_STATUS" == "200" ]]; then
         echo "✅ LoadBalancer access successful (HTTP $LB_STATUS) - This is unexpected without tunnel!"
     else
@@ -62,9 +63,9 @@ fi
 
 # Try ClusterIP access
 echo -e "\nTesting ClusterIP access..."
-CLUSTER_IP=$(ssh ubuntu@$VM_IP "kubectl get service app2-service -o jsonpath='{.spec.clusterIP}'")
+CLUSTER_IP=$(ssh ${REMOTE_USER}@$VM_IP "kubectl get service app2-service -o jsonpath='{.spec.clusterIP}'")
 echo "ClusterIP: $CLUSTER_IP"
-CLUSTER_IP_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$CLUSTER_IP:9000 || echo 'Failed'")
+CLUSTER_IP_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$CLUSTER_IP:9000 || echo 'Failed'")
 if [[ "$CLUSTER_IP_STATUS" == "200" ]]; then
     echo "✅ ClusterIP access successful (HTTP $CLUSTER_IP_STATUS)"
 else
@@ -76,24 +77,24 @@ echo -e "\n===== TESTING WITH MINIKUBE TUNNEL ====="
 
 # Start minikube tunnel
 echo "Starting minikube tunnel..."
-ssh ubuntu@$VM_IP "nohup minikube tunnel > minikube_tunnel.log 2>&1 &"
+ssh ${REMOTE_USER}@$VM_IP "nohup minikube tunnel > minikube_tunnel.log 2>&1 &"
 echo "Waiting for tunnel to initialize..."
 sleep 10
 
 # Get service information again
 echo -e "\nService information with tunnel running:"
-ssh ubuntu@$VM_IP "kubectl get service app2-service -o wide"
+ssh ${REMOTE_USER}@$VM_IP "kubectl get service app2-service -o wide"
 
 # Try LoadBalancer access again
 echo -e "\nTesting LoadBalancer access with tunnel (port 9000)..."
-LB_IP=$(ssh ubuntu@$VM_IP "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo ''")
+LB_IP=$(ssh ${REMOTE_USER}@$VM_IP "kubectl get service app2-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo ''")
 
 if [[ -z "$LB_IP" ]]; then
     echo "❌ No LoadBalancer IP assigned (unexpected with tunnel)"
     LB_STATUS="Failed (No IP)"
 else
     echo "LoadBalancer IP: $LB_IP"
-    LB_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$LB_IP:9000 || echo 'Failed'")
+    LB_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$LB_IP:9000 || echo 'Failed'")
     if [[ "$LB_STATUS" == "200" ]]; then
         echo "✅ LoadBalancer access successful (HTTP $LB_STATUS) - This is expected with tunnel"
     else
@@ -103,7 +104,7 @@ fi
 
 # Try NodePort access again (should still work)
 echo -e "\nTesting NodePort access with tunnel (port 30002)..."
-NODE_PORT_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$MINIKUBE_IP:30002 || echo 'Failed'")
+NODE_PORT_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$MINIKUBE_IP:30002 || echo 'Failed'")
 if [[ "$NODE_PORT_STATUS" == "200" ]]; then
     echo "✅ NodePort access successful (HTTP $NODE_PORT_STATUS)"
 else
@@ -112,7 +113,7 @@ fi
 
 # Try ClusterIP access again
 echo -e "\nTesting ClusterIP access with tunnel..."
-CLUSTER_IP_STATUS=$(ssh ubuntu@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$CLUSTER_IP:9000 || echo 'Failed'")
+CLUSTER_IP_STATUS=$(ssh ${REMOTE_USER}@$VM_IP "curl -s -o /dev/null -w '%{http_code}' http://$CLUSTER_IP:9000 || echo 'Failed'")
 if [[ "$CLUSTER_IP_STATUS" == "200" ]]; then
     echo "✅ ClusterIP access successful (HTTP $CLUSTER_IP_STATUS)"
 else
@@ -131,7 +132,7 @@ fi
 # Clean up - stop tunnel
 echo -e "\n===== CLEANING UP ====="
 echo "Stopping minikube tunnel..."
-ssh ubuntu@$VM_IP "pkill -f 'minikube tunnel' || true"
+ssh ${REMOTE_USER}@$VM_IP "pkill -f 'minikube tunnel' || true"
 
 echo -e "\n===================================================="
 echo "TEST SUMMARY"

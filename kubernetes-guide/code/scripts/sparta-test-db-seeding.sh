@@ -8,15 +8,15 @@ echo "Starting database seeding test..."
 
 # Apply the PV and PVC first
 echo "Creating PV and PVC..."
-kubectl apply -f sparta-pv.yml
+kubectl apply -f ../sparta/sparta-pv.yml
 
 # Deploy the database
 echo "Deploying MongoDB..."
-kubectl apply -f sparta-deploy.yml -l app=sparta-db
+kubectl apply -f ../sparta/sparta-deploy.yml -l app=sparta-db
 
 # Create the services
 echo "Creating services..."
-kubectl apply -f sparta-service.yml
+kubectl apply -f ../sparta/sparta-service.yml
 
 # Wait for database to be ready
 echo "Waiting for MongoDB to be ready..."
@@ -24,7 +24,7 @@ kubectl wait --for=condition=ready pod -l app=sparta-db --timeout=120s
 
 # Apply the database seeding job
 echo "Running database seeding job..."
-kubectl apply -f sparta-db-seed-job.yml
+kubectl apply -f ../sparta/sparta-db-seed-job.yml
 
 # Wait for the job to start
 echo "Waiting for seeding job to start..."
@@ -43,7 +43,7 @@ kubectl logs $SEED_POD -c db-seed
 
 # Deploy the app
 echo "Deploying Sparta app..."
-kubectl apply -f sparta-deploy.yml -l app=sparta-node
+kubectl apply -f ../sparta/sparta-deploy.yml -l app=sparta-node
 
 # Wait for the app to be ready
 echo "Waiting for app to be ready..."

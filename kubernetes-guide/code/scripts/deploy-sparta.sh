@@ -2,7 +2,7 @@
 # Script to deploy the Sparta app on the remote Minikube cluster
 
 # Source configuration
-source ./config.env
+source ../config/config.env
 REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
 
 # Exit on error
@@ -37,11 +37,11 @@ ssh $REMOTE_SERVER "mkdir -p ~/sparta-app"
 
 # Copy Kubernetes manifests to remote server
 echo "Copying Kubernetes manifests to remote server..."
-scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml sparta-db-seed-job.yml load-test.yml minikube-start.sh $REMOTE_SERVER:~/sparta-app/
+scp ../sparta/sparta-deploy.yml ../sparta/sparta-service.yml ../sparta/sparta-pv.yml ../sparta/sparta-hpa.yml ../sparta/sparta-db-seed-job.yml ../sparta/load-test.yml ./minikube-start.sh $REMOTE_SERVER:~/sparta-app/
 
 # Copy Nginx configuration template
 echo "Copying Nginx configuration template to remote server..."
-scp nginx-config-template $REMOTE_SERVER:~/sparta-app/
+scp ../config/nginx-config-template $REMOTE_SERVER:~/sparta-app/
 
 # Apply Kubernetes manifests on remote server
 echo "Applying Kubernetes manifests on remote server..."
@@ -68,7 +68,7 @@ echo "After deployment, use the sparta-connect.sh script to manually connect to 
 
 # Copy the connect-to-sparta script to the remote server
 echo "Copying sparta-connect.sh script to remote server..."
-scp sparta-connect.sh $REMOTE_SERVER:~/sparta-app/
+scp ./sparta-connect.sh $REMOTE_SERVER:~/sparta-app/
 ssh $REMOTE_SERVER "chmod +x ~/sparta-app/sparta-connect.sh"
 
 # Deploy the app after database is seeded
@@ -86,7 +86,7 @@ METRICS_SERVER_STATUS=$(ssh $REMOTE_SERVER "kubectl get deployment metrics-serve
 if [[ "$METRICS_SERVER_STATUS" == *"not found"* ]]; then
   echo "Installing metrics-server..."
   # Copy metrics-server configuration
-  scp infrastructure/metrics-server/metrics-server-fixed.yaml $REMOTE_SERVER:~/sparta-app/
+  scp ../infrastructure/metrics-server/metrics-server-fixed.yaml $REMOTE_SERVER:~/sparta-app/
   # Apply metrics-server configuration
   ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/metrics-server-fixed.yaml"
 else

@@ -2,7 +2,7 @@
 # Script to deploy and test the Sparta app on the remote Minikube cluster
 
 # Source configuration
-source ./config.env
+source ../config/config.env
 REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
 
 # Make deploy-sparta.sh executable if it's not already

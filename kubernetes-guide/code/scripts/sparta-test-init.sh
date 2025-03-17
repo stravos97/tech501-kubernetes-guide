@@ -8,15 +8,15 @@ echo "Starting Sparta app deployment test..."
 
 # Apply the PV and PVC first
 echo "Creating PV and PVC..."
-kubectl apply -f sparta-pv.yml
+kubectl apply -f ../sparta/sparta-pv.yml
 
 # Deploy the database
 echo "Deploying MongoDB..."
-kubectl apply -f sparta-deploy.yml
+kubectl apply -f ../sparta/sparta-deploy.yml
 
 # Create the services
 echo "Creating services..."
-kubectl apply -f sparta-service.yml
+kubectl apply -f ../sparta/sparta-service.yml
 
 # Watch the pods to see the init container in action
 echo "Watching pods to see init container in action..."

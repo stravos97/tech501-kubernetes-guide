@@ -2,7 +2,7 @@
 # Script to check logs of Sparta app and database pods
 
 # Source configuration
-source ./config.env
+source ../config/config.env
 REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
 
 # Exit on error

@@ -2,7 +2,7 @@
 # Script to connect to a Sparta app pod and run npm install manually
 
 # Source configuration
-source ./config.env
+source ../config/config.env
 REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
 
 # Exit on error

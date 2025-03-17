@@ -1,8 +1,11 @@
 #!/bin/bash
 # Script to increase EC2 instance storage space
 
+# Source configuration
+source ../config/config.env
+
 # Set variables
-INSTANCE_IP="3.254.153.213"
+INSTANCE_IP="${REMOTE_SERVER_IP}"
 
 # Function to handle errors
 function error_exit {
@@ -64,7 +67,7 @@ done
 
 # Step 6: Extend the file system on the instance
 echo "Extending the file system on the instance..."
-ssh ubuntu@$INSTANCE_IP "sudo growpart /dev/xvda 1 && sudo resize2fs /dev/xvda1" || {
+ssh ${REMOTE_USER}@$INSTANCE_IP "sudo growpart /dev/xvda 1 && sudo resize2fs /dev/xvda1" || {
     echo "NOTE: Could not automatically extend the file system."
     echo "You may need to manually run the following commands on the instance:"
     echo "  sudo growpart /dev/xvda 1"
@@ -74,7 +77,7 @@ ssh ubuntu@$INSTANCE_IP "sudo growpart /dev/xvda 1 && sudo resize2fs /dev/xvda1"
 
 # Step 7: Verify the new space
 echo "Verifying the new space..."
-ssh ubuntu@$INSTANCE_IP "df -h /" || error_exit "Could not verify new space"
+ssh ${REMOTE_USER}@$INSTANCE_IP "df -h /" || error_exit "Could not verify new space"
 
 echo "====== Volume resize completed successfully ======"
 echo "The instance now has a $NEW_SIZE GB volume."

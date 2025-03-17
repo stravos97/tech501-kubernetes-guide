@@ -2,7 +2,7 @@
 # Script to test the manual npm install process for the Sparta app
 
 # Source configuration
-source ./config.env
+source ../config/config.env
 REMOTE_SERVER="${REMOTE_USER}@${REMOTE_SERVER_IP}"
 
 # Exit on error
