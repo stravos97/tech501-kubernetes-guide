@@ -1,10 +1,26 @@
-# Kubernetes Guide
+# Kubernetes Reference
 
-This repository contains Kubernetes deployment configurations and scripts for various applications.
+This document serves as a reference to the Kubernetes documentation and resources available in the tech501-kubernetes repository.
 
-## Directory Structure
+## Repository Location
 
-The repository is organized into two main directories:
+The Kubernetes code and documentation can be found at:
+```
+/Users/haashimalvi/Downloads/Do not delete/spartaglobal/tech501-kubernetes
+```
+
+## Key Documentation
+
+For detailed Kubernetes documentation, please refer to the [Kubernetes-Guide.md](Kubernetes-Guide.md) file in this directory, which provides comprehensive information on:
+
+- Deploying a Node.js "Sparta" Test App with MongoDB
+- Setting up persistent storage for MongoDB
+- Implementing horizontal pod autoscaling
+- Troubleshooting common issues
+
+## Repository Structure
+
+The Kubernetes repository is organized into two main directories:
 
 ### `/code`
 
@@ -29,25 +45,13 @@ Contains all documentation:
 - `/docs/app3` - Documentation specific to App3
 - `/docs/diagrams` - Diagrams and visual documentation
 - `/docs/implementation` - Implementation guides and documentation
-- Various markdown files with documentation on different aspects of the system
+- `/docs/day1-fundamentals` - Day 1 fundamentals documentation
+- `/docs/day2` - Day 2 documentation (Persistent Storage, Autoscaling)
+- `/docs/day3` - Day 3 documentation (Advanced topics)
 
-## Usage
+## Key Scripts
 
-All scripts should be run from the root directory of the repository. The scripts have been updated to reference files in their new locations.
-
-For example, to deploy App1 and App2:
-
-```bash
-./code/scripts/deploy-app1-app2.sh
-```
-
-To deploy App3:
-
-```bash
-./code/app3/app3-deploy.sh
-```
-
-Other useful scripts:
+All scripts should be run from the root directory of the Kubernetes repository:
 
 ```bash
 # Deploy all applications
@@ -75,9 +79,3 @@ Other useful scripts:
 ./code/sparta-with-pv/minikube-setup.sh
 ./code/sparta-with-pv/sparta-pv-test.sh
 ```
-
-## Notes
-
-- All paths in scripts have been updated to reference the new file structure
-- Configuration files are now located in `/code/config`
-- Documentation is now centralized in the `/docs` directory
