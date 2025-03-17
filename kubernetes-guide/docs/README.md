@@ -1,53 +1,104 @@
-# Documentation
+# Kubernetes Project: Comprehensive Guide
 
-This directory contains comprehensive documentation for the Kubernetes Guide project.
+## Introduction
 
-## Directory Structure
+This guide provides a structured walkthrough of Kubernetes fundamentals and advanced features across three days. It is designed to take you from basic concepts to advanced deployments with hands-on exercises and detailed explanations.
 
+## Prerequisites
+
+- Basic understanding of containerization concepts
+- Docker installed on your local machine
+- Basic command-line knowledge
+- A text editor for YAML file creation
+
+## Table of Contents
+
+### Day 1: Kubernetes Fundamentals
+1. [Kubernetes Concepts](day1-fundamentals/01_kubernetes_fundamentals.md)
+   - Why Kubernetes is needed
+   - Benefits of Kubernetes
+   - Success stories
+   - Architecture: clusters, nodes, and components
+   - Kubernetes objects: Pods, ReplicaSets, Deployments
+   - Security considerations
+   
+2. [Cluster Setup](day1-fundamentals/02_cluster_setup.md)
+   - Setting up Kubernetes with Docker Desktop
+   - Troubleshooting cluster startup
+   
+3. [Basic Deployments](day1-fundamentals/03_basic_deployments.md)
+   - Nginx Deployment with NodePort Service
+   - Understanding Deployment YAML
+   - Service configuration
+   
+4. [Observing Kubernetes Behaviors](day1-fundamentals/04_observing_behaviors.md)
+   - Pod self-healing
+   - Scaling replicas dynamically
+   - Zero downtime deployment updates
+   - Resource cleanup
+   
+5. [Multi-tier Application Deployment](day1-fundamentals/05_nodejs_app_deployment.md)
+   - Deploying a Node.js application
+   - Setting up MongoDB
+   - Connecting application components
+   - Testing and troubleshooting
+
+### Day 2: Persistent Storage & Scaling
+1. [Persistent Volumes](day2/01_Persistent_Storage.md)
+   - Understanding storage in Kubernetes
+   - PersistentVolumes and PersistentVolumeClaims
+   - Storage Classes
+   - Stateful applications
+
+2. [Autoscaling Strategies](day2/02_Autoscaling.md)
+   - Horizontal Pod Autoscaling
+   - Vertical Pod Autoscaling
+   - Cluster Autoscaling
+   - Resource metrics and custom metrics
+
+### Day 3: Cloud Deployment & Networking
+1. [Minikube on Cloud VM](day3/01_Minikube_Cloud_Setup.md)
+   - Setting up a cloud VM
+   - Installing Minikube and dependencies
+   - Deploying applications on Minikube
+   - Managing cloud resources
+
+2. [Advanced Networking](day3/02_Advanced_Networking.md)
+   - Configuring Nginx reverse proxy
+   - Kubernetes networking concepts
+   - LoadBalancer and NodePort services
+   - Automating cluster startup
+
+## Architecture Overview
+
+```mermaid
+graph TD
+  ControlPlane[Control Plane]
+  Etcd[Etcd KU datastore]
+  APIServer[API Server]
+  Controller[Controller Manager]
+  Scheduler[Scheduler]
+  WorkerNodes[Worker Nodes]
+  Docker_Engine[Docker Engine]
+  Kubelet[Kubelet]
+  KubeProxy[Kube-Proxy]
+  ControlPlane -->|Contains| Etcd
+  ControlPlane -->|Contains| APIServer
+  ControlPlane -->|Contains| Controller
+  ControlPlane -->|Contains| Scheduler
+  WorkerNodes -->|Run| Kubelet
+  WorkerNodes -->|Run| Docker_Engine
+  WorkerNodes -->|Run| KubeProxy
 ```
-docs/
-├── implementation/       # Detailed implementation documentation
-│   └── IMPLEMENTATION.md # HPA and PV/PVC management implementation details
-├── diagrams/             # Architecture and flow diagrams
-│   └── diagrams.md       # Mermaid diagrams for HPA and PV/PVC management
-└── README.md             # This file
-```
 
-## Documentation Overview
+*The diagram above shows the key components of a Kubernetes cluster, including the Control Plane (which manages the cluster) and Worker Nodes (which run the containerized applications).*
 
-### Implementation Details
+## What You'll Learn
 
-The [implementation](implementation/IMPLEMENTATION.md) documentation provides detailed explanations of:
-
-1. **Horizontal Pod Autoscaler (HPA) Implementation**
-   - Resource requests in deployment
-   - HPA configuration
-   - Load testing with Apache Bench
-   - How the HPA works
-
-2. **PV/PVC Management for Data Retention**
-   - Persistent Volume configuration
-   - PVC recreation process
-   - How data retention works with the `Retain` policy
-
-### Architecture Diagrams
-
-The [diagrams](diagrams/diagrams.md) documentation includes Mermaid diagrams that visually represent:
-
-1. **Horizontal Pod Autoscaler (HPA) Flow**
-   - How the Metrics Server, HPA Controller, and Deployment interact
-   - Scale up and scale down processes
-
-2. **PV/PVC Management Flow**
-   - The sequence of operations for PVC recreation while retaining data
-   - How MongoDB detaches and reattaches to the PV
-
-3. **System Architecture**
-   - Overall system architecture showing the relationships between components
-   - Frontend and database tiers
-
-## Using the Documentation
-
-- Start with the architecture diagrams to get a visual understanding of the system
-- Then dive into the implementation details for a deeper understanding of how things work
-- Refer to the specific deployment files in the `deployments/` directory to see the actual configurations
+This guide includes:
+- Detailed technical explanations of Kubernetes concepts
+- Production-grade YAML manifests with explanations
+- Hands-on exercises with step-by-step instructions
+- Troubleshooting tips for common issues
+- Best practices for security and deployment
+- Architectural insights for scalable applications

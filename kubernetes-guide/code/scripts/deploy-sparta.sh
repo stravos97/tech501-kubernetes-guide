@@ -37,7 +37,7 @@ ssh $REMOTE_SERVER "mkdir -p ~/sparta-app"
 
 # Copy Kubernetes manifests to remote server
 echo "Copying Kubernetes manifests to remote server..."
-scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml sparta-db-seed-job.yml load-test.yml minikube-startup.sh $REMOTE_SERVER:~/sparta-app/
+scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml sparta-db-seed-job.yml load-test.yml minikube-start.sh $REMOTE_SERVER:~/sparta-app/
 
 # Copy Nginx configuration template
 echo "Copying Nginx configuration template to remote server..."
@@ -64,12 +64,12 @@ ssh $REMOTE_SERVER "kubectl wait --for=condition=ready pod -l app=sparta-db --ti
 
 # Note: Database seeding job has been replaced with manual npm install
 echo "Skipping automated database seeding job..."
-echo "After deployment, use the connect-to-sparta.sh script to manually connect to the pod and run npm install"
+echo "After deployment, use the sparta-connect.sh script to manually connect to the pod and run npm install"
 
 # Copy the connect-to-sparta script to the remote server
-echo "Copying connect-to-sparta.sh script to remote server..."
-scp connect-to-sparta.sh $REMOTE_SERVER:~/sparta-app/
-ssh $REMOTE_SERVER "chmod +x ~/sparta-app/connect-to-sparta.sh"
+echo "Copying sparta-connect.sh script to remote server..."
+scp sparta-connect.sh $REMOTE_SERVER:~/sparta-app/
+ssh $REMOTE_SERVER "chmod +x ~/sparta-app/sparta-connect.sh"
 
 # Deploy the app after database is seeded
 echo "Deploying app..."
@@ -122,9 +122,9 @@ ssh $REMOTE_SERVER "
   
   if (( \$(echo \"\$AVAILABLE_SPACE < 1\" | bc -l) )); then
     echo \"Warning: Low disk space (\${AVAILABLE_SPACE}GB available). Skipping auto-start setup.\"
-    echo \"Please run the minikube-startup.sh script manually after increasing disk space.\"
+    echo \"Please run the minikube-start.sh script manually after increasing disk space.\"
   else
-    chmod +x ~/sparta-app/minikube-startup.sh && sudo ~/sparta-app/minikube-startup.sh
+    chmod +x ~/sparta-app/minikube-start.sh && sudo ~/sparta-app/minikube-start.sh
   fi
 "
 
@@ -153,19 +153,19 @@ echo ""
 echo "IMPORTANT: You need to run npm install and database seeding in the Sparta app pod."
 echo ""
 
-# Make connect-to-sparta.sh executable if it's not already
-chmod +x ./connect-to-sparta.sh
+# Make sparta-connect.sh executable if it's not already
+chmod +x ./sparta-connect.sh
 
 # Prompt for connecting to the pod
 echo "Do you want to connect to the pod now to run npm install and database seeding? (y/n)"
 read -r response
 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
   echo "Connecting to Sparta app pod..."
-  ./connect-to-sparta.sh
+  ./sparta-connect.sh
 else
   echo "Skipping connection to pod."
   echo "To manually connect later, run the following command:"
-  echo "./connect-to-sparta.sh"
+  echo "./sparta-connect.sh"
   echo ""
   echo "This will connect you to the pod where you can run:"
   echo "  cd /app"

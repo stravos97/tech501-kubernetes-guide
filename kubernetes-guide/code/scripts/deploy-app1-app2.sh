@@ -16,9 +16,9 @@ echo "Minikube is running. Proceeding with deployment..."
 ssh ubuntu@52.16.191.37 "mkdir -p ~/app1 ~/app2"
 
 # Copy files to the VM
-scp app1/app1-deploy.yml app1/app1-service.yml ubuntu@52.16.191.37:~/app1/
-scp app2/app2-deploy.yml app2/app2-service.yml ubuntu@52.16.191.37:~/app2/
-scp nginx-config-lb ubuntu@52.16.191.37:~/nginx-config-lb
+scp code/app1/app1-deploy.yml code/app1/app1-service.yml ubuntu@52.16.191.37:~/app1/
+scp code/app2/app2-deploy.yml code/app2/app2-service.yml ubuntu@52.16.191.37:~/app2/
+scp code/config/nginx-config-lb ubuntu@52.16.191.37:~/nginx-config-lb
 
 # Apply the Kubernetes manifests on the VM
 echo "Applying Kubernetes manifests..."

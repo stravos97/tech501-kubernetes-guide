@@ -1,77 +1,83 @@
 # Kubernetes Guide
 
-This repository contains Kubernetes configuration files, examples, and documentation for learning and implementing Kubernetes features.
+This repository contains Kubernetes deployment configurations and scripts for various applications.
 
-## Repository Structure
+## Directory Structure
 
+The repository is organized into two main directories:
+
+### `/code`
+
+Contains all Kubernetes manifests, configuration files, and scripts:
+
+- `/code/app1` - App1 deployment and service manifests
+- `/code/app2` - App2 deployment and service manifests
+- `/code/app3` - App3 deployment and service manifests, along with deployment scripts
+- `/code/nginx` - Nginx deployment and service manifests
+- `/code/sparta` - Sparta application deployment and service manifests
+- `/code/sparta-with-pv` - Sparta application with persistent volume configuration
+- `/code/config` - Configuration files for various applications
+- `/code/scripts` - Shell scripts for deployment and management
+- `/code/infrastructure` - Infrastructure components like metrics-server
+- `/code/deployments` - Additional deployment configurations
+- `/code/logs` - Log files
+
+### `/docs`
+
+Contains all documentation:
+
+- `/docs/app3` - Documentation specific to App3
+- `/docs/diagrams` - Diagrams and visual documentation
+- `/docs/implementation` - Implementation guides and documentation
+- Various markdown files with documentation on different aspects of the system
+
+## Usage
+
+All scripts should be run from the root directory of the repository. The scripts have been updated to reference files in their new locations.
+
+For example, to deploy App1 and App2:
+
+```bash
+./code/scripts/deploy-app1-app2.sh
 ```
-kubernetes-guide/
-├── deployments/                  # Application deployments
-│   ├── nginx/                    # Basic Nginx deployment example
-│   └── sparta/                   # Sparta Node.js application deployments
-│       ├── basic/                # Basic deployment without advanced features
-│       └── advanced/             # Advanced deployment with HPA and PV
-│           ├── config/           # Core configuration files
-│           ├── persistence/      # PV and PVC configurations
-│           └── testing/          # Load testing and test scripts
-├── infrastructure/               # Cluster-level components
-│   └── metrics-server/           # Metrics Server configurations
-├── docs/                         # Documentation
-│   ├── implementation/           # Implementation details
-│   └── diagrams/                 # Architecture diagrams
-└── notes/                        # Learning notes and tutorials
+
+To deploy App3:
+
+```bash
+./code/app3/app3-deploy.sh
 ```
 
-## Key Features
+Other useful scripts:
 
-This repository demonstrates several key Kubernetes features:
+```bash
+# Deploy all applications
+./code/scripts/deploy-all-apps.sh
 
-1. **Basic Deployments**: Simple Nginx and Sparta Node.js deployments
-2. **Horizontal Pod Autoscaler (HPA)**: Automatic scaling based on CPU utilization
-3. **Persistent Volumes (PV) and Claims (PVC)**: Data persistence with volume management
-4. **Load Testing**: Tools for testing application performance and autoscaling
-5. **Metrics Server**: Configuration for collecting resource metrics
+# Deploy Sparta application
+./code/scripts/deploy-sparta.sh
 
-## Getting Started
+# Connect to Sparta application
+./code/scripts/sparta-connect.sh
 
-To get started with the examples in this repository:
+# Check Sparta logs
+./code/scripts/sparta-check-logs.sh
 
-1. Ensure you have a Kubernetes cluster running (Minikube, Docker Desktop, or a cloud provider)
-2. Install the Metrics Server for HPA functionality:
-   ```bash
-   kubectl apply -f infrastructure/metrics-server/metrics-server-fixed.yaml
-   ```
-3. Deploy the basic examples:
-   ```bash
-   kubectl apply -f deployments/nginx/nginx-deploy.yml
-   kubectl apply -f deployments/nginx/nginx-service.yml
-   ```
-4. Explore the advanced examples with HPA and PV:
-   ```bash
-   # Apply the PV and PVC
-   kubectl apply -f deployments/sparta/advanced/persistence/pv.yml
-   
-   # Apply the deployment and service
-   kubectl apply -f deployments/sparta/advanced/config/sparta-deploy.yml
-   kubectl apply -f deployments/sparta/advanced/config/sparta-service.yml
-   
-   # Apply the HPA
-   kubectl apply -f deployments/sparta/advanced/config/sparta-hpa.yml
-   ```
+# Start Minikube
+./code/scripts/minikube-start.sh
 
-5. Run load tests to see the HPA in action:
-   ```bash
-   kubectl apply -f deployments/sparta/advanced/testing/load-test.yml
-   ```
+# Cleanup App3
+./code/app3/app3-cleanup.sh
 
-## Documentation
+# Recover Kubernetes after instance restart
+./code/app3/kubernetes-recover.sh
 
-For more detailed information, refer to:
+# Sparta with Persistent Volume scripts
+./code/sparta-with-pv/minikube-setup.sh
+./code/sparta-with-pv/sparta-pv-test.sh
+```
 
-- [Implementation Details](docs/implementation/IMPLEMENTATION.md): Detailed explanation of HPA and PV/PVC management
-- [Architecture Diagrams](docs/diagrams/diagrams.md): Visual representations of the system architecture
-- [Notes](notes/): Learning materials and tutorials on Kubernetes concepts
+## Notes
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- All paths in scripts have been updated to reference the new file structure
+- Configuration files are now located in `/code/config`
+- Documentation is now centralized in the `/docs` directory

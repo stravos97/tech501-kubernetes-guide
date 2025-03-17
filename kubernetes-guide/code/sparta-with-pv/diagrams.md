@@ -1,4 +1,4 @@
-# Kubernetes HPA and PV/PVC Management Diagrams
+# Kubernetes Architecture and Deployment Diagrams
 
 ## Horizontal Pod Autoscaler (HPA) Flow
 
@@ -47,18 +47,28 @@ sequenceDiagram
     MongoDB->>PV: Access retained data
 ```
 
-## System Architecture
+## Complete System Architecture
 
 ```mermaid
 graph TD
-    A[User] -->|Accesses| B[Sparta Node.js App]
+    A[User] -->|Accesses| N[Nginx Reverse Proxy]
+    N -->|Routes to| B[Sparta Node.js App]
+    N -->|Routes to| APP2[App2]
+    N -->|Routes to /hello| APP3[App3 Hello-Minikube]
+    
     B -->|Scaled by| C[Horizontal Pod Autoscaler]
     B -->|Reads/Writes| D[MongoDB]
     D -->|Uses| E[Persistent Volume Claim]
     E -->|Bound to| F[Persistent Volume]
     
+    APP3 -->|Exposed via| LB[LoadBalancer Service]
+    LB -->|Enabled by| MT[Minikube Tunnel]
+    
     subgraph "Frontend Tier"
+    N
     B
+    APP2
+    APP3
     C
     end
     
@@ -71,6 +81,75 @@ graph TD
     subgraph "Storage"
     F -->|Stores| G[MongoDB Data]
     end
+    
+    subgraph "Networking"
+    LB
+    MT
+    end
 ```
 
-These diagrams illustrate the key components and flows of the Horizontal Pod Autoscaler (HPA) and Persistent Volume (PV) management implementations.
+## Deployment Workflow with Manual NPM Install
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Script as Deployment Script
+    participant K8s as Kubernetes
+    participant DB as MongoDB Pod
+    participant App as Sparta App Pod
+    participant Manual as Manual Process
+    
+    User->>Script: Run deploy-sparta.sh
+    Script->>K8s: Apply PV and PVC
+    Script->>K8s: Deploy MongoDB
+    K8s->>DB: Create and start MongoDB pod
+    Script->>K8s: Wait for MongoDB readiness
+    Note over DB: MongoDB ready
+    
+    Script->>K8s: Deploy Sparta app
+    K8s->>App: Create app pod
+    Note over App: Init container runs
+    App->>DB: Check MongoDB connectivity
+    Note over App: Main container starts
+    Script->>K8s: Wait for app readiness
+    
+    Script->>User: Prompt for manual npm install
+    User->>Manual: Run connect-to-sparta.sh
+    Manual->>App: Connect to pod
+    Manual->>App: Run npm install
+    Manual->>App: Run database seeding
+    Manual->>App: Exit pod
+    
+    User->>K8s: Apply HPA
+    K8s->>App: Configure auto-scaling
+    
+    Note over App: Application fully operational
+```
+
+## Recovery Process After Server Restart
+
+```mermaid
+graph TD
+    A[Server Restart] -->|Triggers| B[Minikube Auto-Start]
+    B -->|Starts| C[Kubernetes Cluster]
+    C -->|Recovers| D[Persistent Volumes]
+    
+    D -->|Reattaches to| E[MongoDB Pod]
+    E -->|Contains| F[Preserved Data]
+    
+    C -->|Restarts| G[Sparta App Pods]
+    G -->|Wait for| E
+    
+    H[Manual Process] -->|Connects to| G
+    H -->|Runs| I[npm install]
+    H -->|Runs| J[Database Seeding]
+    
+    K[Minikube Tunnel] -->|Enables| L[LoadBalancer Services]
+    L -->|Exposes| M[App3 Service]
+    
+    N[Nginx] -->|Routes to| G
+    N -->|Routes to| M
+    N -->|Routes to| O[App2 Pods]
+```
+
+These diagrams illustrate the key components and flows of the complete Kubernetes setup, including the Horizontal Pod Autoscaler (HPA), Persistent Volume (PV) management, manual npm install process, and the overall system architecture with all applications.
