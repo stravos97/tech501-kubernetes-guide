@@ -37,7 +37,7 @@ ssh $REMOTE_SERVER "mkdir -p ~/sparta-app"
 
 # Copy Kubernetes manifests to remote server
 echo "Copying Kubernetes manifests to remote server..."
-scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml load-test.yml minikube-startup.sh $REMOTE_SERVER:~/sparta-app/
+scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml sparta-db-seed-job.yml load-test.yml minikube-startup.sh $REMOTE_SERVER:~/sparta-app/
 
 # Copy Nginx configuration template
 echo "Copying Nginx configuration template to remote server..."
@@ -50,13 +50,30 @@ echo "Applying Kubernetes manifests on remote server..."
 echo "Creating PV and PVC..."
 ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/sparta-pv.yml"
 
-# Then deploy the app and database
-echo "Deploying app and database..."
-ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/sparta-deploy.yml"
+# Deploy the database first
+echo "Deploying database..."
+ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/sparta-deploy.yml -l app=sparta-db"
 
 # Create the services
 echo "Creating services..."
 ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/sparta-service.yml"
+
+# Wait for database to be ready
+echo "Waiting for database to be ready..."
+ssh $REMOTE_SERVER "kubectl wait --for=condition=ready pod -l app=sparta-db --timeout=120s"
+
+# Note: Database seeding job has been replaced with manual npm install
+echo "Skipping automated database seeding job..."
+echo "After deployment, use the connect-to-sparta.sh script to manually connect to the pod and run npm install"
+
+# Copy the connect-to-sparta script to the remote server
+echo "Copying connect-to-sparta.sh script to remote server..."
+scp connect-to-sparta.sh $REMOTE_SERVER:~/sparta-app/
+ssh $REMOTE_SERVER "chmod +x ~/sparta-app/connect-to-sparta.sh"
+
+# Deploy the app after database is seeded
+echo "Deploying app..."
+ssh $REMOTE_SERVER "kubectl apply -f ~/sparta-app/sparta-deploy.yml -l app=sparta-node"
 
 # Apply HPA configuration
 echo "Configuring Horizontal Pod Autoscaler..."
@@ -118,8 +135,43 @@ ssh $REMOTE_SERVER "kubectl get services"
 ssh $REMOTE_SERVER "kubectl get pv,pvc"
 ssh $REMOTE_SERVER "kubectl get hpa"
 
+# Wait for all pods to be ready
+echo "Waiting for all pods to be ready..."
+ssh $REMOTE_SERVER "
+  echo 'Waiting for database pod to be ready...'
+  kubectl wait --for=condition=ready pod -l app=sparta-db --timeout=120s
+  
+  echo 'Waiting for app pods to be ready...'
+  kubectl wait --for=condition=ready pod -l app=sparta-node --timeout=120s
+  
+  echo 'All pods are ready!'
+"
+
 echo "Sparta app deployment completed successfully!"
 echo "You can access the app at: http://${REMOTE_SERVER_IP}"
+echo ""
+echo "IMPORTANT: You need to run npm install and database seeding in the Sparta app pod."
+echo ""
+
+# Make connect-to-sparta.sh executable if it's not already
+chmod +x ./connect-to-sparta.sh
+
+# Prompt for connecting to the pod
+echo "Do you want to connect to the pod now to run npm install and database seeding? (y/n)"
+read -r response
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+  echo "Connecting to Sparta app pod..."
+  ./connect-to-sparta.sh
+else
+  echo "Skipping connection to pod."
+  echo "To manually connect later, run the following command:"
+  echo "./connect-to-sparta.sh"
+  echo ""
+  echo "This will connect you to the pod where you can run:"
+  echo "  cd /app"
+  echo "  npm install"
+  echo "  node seeds/seed.js"
+fi
 echo ""
 echo "To test HPA, you can run the load test with:"
 echo "ssh $REMOTE_SERVER \"kubectl apply -f ~/sparta-app/load-test.yml\""

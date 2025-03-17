@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sparta-db-seed-job
+spec:
+  ttlSecondsAfterFinished: 100  # Delete job after completion
+  template:
+    spec:
+      containers:
+        - name: db-seed
+          image: haashim1/haashim-node-website:multi
+          env:
+            - name: DB_HOST
+              value: "mongodb://sparta-db-service:27017/posts"
+            - name: EXECUTE_NPM_INSTALL
+              value: "true"
+          command: ['/bin/bash', '-c']
+          args:
+            - |
+              echo "Starting database seeding process..."
+              cd /app
+              
+              # Create a seed script that checks for existing data
+              cat > seed-db.js << 'EOF'
+              const mongoose = require('mongoose');
+              const dbURI = process.env.DB_HOST || 'mongodb://sparta-db-service:27017/posts';
+
+              // Define the Post schema
+              const postSchema = new mongoose.Schema({
+                title: String,
+                body: String
+              });
+
+              // Create the Post model
+              const Post = mongoose.model('Post', postSchema);
+
+              // Connect to MongoDB
+              console.log('Connecting to MongoDB at:', dbURI);
+              mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
+                .then(() => {
+                  console.log('Connected to MongoDB successfully');
+                  seedDatabase();
+                })
+                .catch(err => {
+                  console.error('Failed to connect to MongoDB:', err);
+                  process.exit(1);
+                });
+
+              // Seed the database with sample posts
+              async function seedDatabase() {
+                try {
+                  // Check if posts already exist
+                  const count = await Post.countDocuments();
+                  if (count > 0) {
+                    console.log(`Database already has ${count} posts. Skipping seeding.`);
+                    process.exit(0);
+                  }
+
+                  // Sample posts data
+                  const samplePosts = [];
+                  
+                  // Create 100 sample posts
+                  for (let i = 1; i <= 100; i++) {
+                    samplePosts.push({
+                      title: `Sample Post ${i}`,
+                      body: `This is the body of sample post ${i}. It contains information about Sparta Global and its training programs.`
+                    });
+                  }
+
+                  // Insert the sample posts
+                  const result = await Post.insertMany(samplePosts);
+                  console.log(`Successfully seeded database with ${result.length} posts`);
+                  
+                  // Display the inserted posts
+                  const posts = await Post.find().limit(5);
+                  console.log('First 5 posts in database:');
+                  posts.forEach(post => {
+                    console.log(`- ${post.title}`);
+                  });
+
+                  process.exit(0);
+                } catch (err) {
+                  console.error('Error seeding database:', err);
+                  process.exit(1);
+                }
+              }
+              EOF
+              
+              # Install dependencies if needed
+              if [ "$EXECUTE_NPM_INSTALL" = "true" ]; then
+                echo "Installing dependencies..."
+                npm install mongoose
+              fi
+              
+              # Run the seed script
+              echo "Running database seed script..."
+              node seed-db.js
+      restartPolicy: OnFailure

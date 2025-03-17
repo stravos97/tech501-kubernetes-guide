@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sparta-node-deployment
+  labels:
+    app: sparta-node
 spec:
   replicas: 2  # Starting with 2 replicas as per HPA requirements
   selector:
@@ -28,12 +30,20 @@ spec:
             - name: DB_HOST
               value: "mongodb://sparta-db-service:27017/posts"
             - name: EXECUTE_NPM_INSTALL
-              value: "true"
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sparta-db-deployment
+  labels:
+    app: sparta-db
 spec:
   replicas: 1  # Using 1 replica since we're using ReadWriteOnce PV
   selector:

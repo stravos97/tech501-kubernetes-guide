@@ -16,6 +16,20 @@ echo "Starting deployment..."
 echo -e "\n\nVerifying pods are running..."
 ssh ${REMOTE_SERVER} "kubectl get pods"
 
+# Make connect-to-sparta.sh executable
+chmod +x ./connect-to-sparta.sh
+
+# Prompt for manual npm install and database seeding
+echo -e "\n\nIMPORTANT: You need to manually run npm install and database seeding in the Sparta app pod."
+echo "Do you want to connect to the pod now to run npm install and database seeding? (y/n)"
+read -r response
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+  echo "Connecting to Sparta app pod..."
+  ./connect-to-sparta.sh
+else
+  echo "Skipping manual npm install and database seeding. Remember to run './connect-to-sparta.sh' later to complete the setup."
+fi
+
 # Configure Minikube auto-start
 echo -e "\n\nConfiguring Minikube auto-start..."
 ssh ${REMOTE_SERVER} "sudo chmod +x ~/sparta-app/minikube-startup.sh && sudo ~/sparta-app/minikube-startup.sh"
