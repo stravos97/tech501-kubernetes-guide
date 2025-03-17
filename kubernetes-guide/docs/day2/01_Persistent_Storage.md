@@ -43,66 +43,68 @@ graph TD
 
 ### Creating a PersistentVolume
 
-Let's create a PersistentVolume YAML file (mongo-pv.yaml):
+Let's create a PersistentVolume YAML file (pv.yml):
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: mongo-pv
+  name: sparta-db-pv
 spec:
   capacity:
     storage: 100Mi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/data/mongo"
+    path: "/data/mongodb"
   persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
 ```
 
 This PV definition includes:
 
 - **Capacity**: 100Mi (just for testing, 0.1GB). Ensure your Docker Desktop VM has that space free (it should).
 - **AccessModes**: ReadWriteOnce (means it can be mounted by one node at a time in read-write – that's fine because we only have one node and one pod for MongoDB).
-- **hostPath**: "/data/mongo" on the node – this is a directory on the node's filesystem. Docker Desktop's node is a VM where /data/mongo will be created. (Using hostPath ties us to that environment, but it's simplest for demo. On a real cluster, you'd use network storage or cloud volumes.)
+- **hostPath**: "/data/mongodb" on the node – this is a directory on the node's filesystem. Docker Desktop's node is a VM where /data/mongodb will be created. (Using hostPath ties us to that environment, but it's simplest for demo. On a real cluster, you'd use network storage or cloud volumes.)
 - **ReclaimPolicy**: Retain – this is important. It means if we delete the PVC later, the PV is not automatically deleted. The data remains on disk until an admin manually cleans it or reassigns it. We choose Retain because one of our tasks is to remove the PVC while retaining data.
+- **storageClassName**: "" - We explicitly set this to an empty string to indicate we're not using a storage class, which helps avoid binding issues.
 
 ### Creating a PersistentVolumeClaim
 
-Next, let's create a PersistentVolumeClaim to actually use this PV (mongo-pvc.yaml):
+Next, let's create a PersistentVolumeClaim to actually use this PV. In our project, both the PV and PVC are defined in the same file (pv.yml):
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mongo-pvc
+  name: sparta-db-pvc
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 100Mi
-  volumeName: mongo-pv
+  volumeName: sparta-db-pv
+  storageClassName: ""
 ```
 
 In this PVC:
 
 - We request 100Mi storage with ReadWriteOnce access (matching what the PV offers).
-- By specifying `volumeName: mongo-pv`, we explicitly bind to the PV we created. (Alternatively, one could rely on label matching or storageClass binding, but explicit binding is fine here since we know the PV name.)
-- If we had a storageClassName defined on the PV and PVC, binding can also happen by class. In this simple case, leaving storageClassName blank and specifying volumeName does a manual binding.
+- By specifying `volumeName: sparta-db-pv`, we explicitly bind to the PV we created. (Alternatively, one could rely on label matching or storageClass binding, but explicit binding is fine here since we know the PV name.)
+- We explicitly set `storageClassName: ""` to indicate we're not using a storage class, which helps avoid binding issues.
 
 Apply the PV and PVC:
 
 ```bash
-kubectl apply -f mongo-pv.yaml
-kubectl apply -f mongo-pvc.yaml
+kubectl apply -f code/sparta-with-pv/pv.yml
 ```
 
 Check the status:
 
 ```bash
-kubectl get pv mongo-pv
-kubectl get pvc mongo-pvc
+kubectl get pv sparta-db-pv
+kubectl get pvc sparta-db-pvc
 ```
 
 The PV's STATUS should change to "Bound" (bound to the PVC) [2]. The PVC's status becomes "Bound" as well, indicating it successfully claimed the PV.
@@ -111,41 +113,50 @@ The PV's STATUS should change to "Bound" (bound to the PVC) [2]. The PVC's statu
 
 Now we need to modify the MongoDB Deployment to use this storage. We'll add a volume and volumeMount to the pod spec.
 
-Edit the mongo deployment (or create a new YAML mongo-deployment-persistent.yaml):
+Here's how our MongoDB deployment is configured in `code/sparta-with-pv/sparta-deploy.yml`:
 
 ```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sparta-db-deployment
 spec:
+  replicas: 1  # Using 1 replica since we're using ReadWriteOnce PV
+  selector:
+    matchLabels:
+      app: sparta-db
   template:
+    metadata:
+      labels:
+        app: sparta-db
     spec:
       containers:
-      - name: mongodb
-        image: mongo:4.4
-        ports:
-        - containerPort: 27017
-        env:
-        - name: MONGO_INITDB_DATABASE
-          value: "sparta"
-        volumeMounts:
-        - name: mongo-storage
-          mountPath: /data/db
+        - name: sparta-db
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
       volumes:
-      - name: mongo-storage
-        persistentVolumeClaim:
-          claimName: mongo-pvc
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: sparta-db-pvc
 ```
 
-Changes made:
+Key points about this configuration:
 
-- Added a `volumeMounts` entry to mount our volume at `/data/db` (that's where MongoDB stores its database files inside the container by default).
-- Added a `volumes` section referencing `mongo-pvc`. This tells Kubernetes to attach the PV (via the claim) to the pod.
+- We set `replicas: 1` because our PV has ReadWriteOnce access mode, which only allows mounting by one node at a time.
+- We add a `volumeMounts` entry to mount our volume at `/data/db` (that's where MongoDB stores its database files inside the container by default).
+- We add a `volumes` section referencing `sparta-db-pvc`. This tells Kubernetes to attach the PV (via the claim) to the pod.
 
 Apply the updated deployment:
 
 ```bash
-kubectl apply -f mongo-deployment-persistent.yaml
+kubectl apply -f code/sparta-with-pv/sparta-deploy.yml
 ```
 
-Since we changed the pod spec, Kubernetes will terminate the old MongoDB pod and create a new one (rolling update with maxUnavailable=0 or 1). The new pod will start MongoDB and now it will be writing data to the host path `/data/mongo` on the node, which is persisted.
+Since we changed the pod spec, Kubernetes will terminate the old MongoDB pod and create a new one (rolling update with maxUnavailable=0 or 1). The new pod will start MongoDB and now it will be writing data to the host path `/data/mongodb` on the node, which is persisted.
 
 ### Verifying Data Persistence
 
@@ -155,28 +166,28 @@ To verify that our data persists across pod restarts:
 
 ```bash
 # Get the MongoDB pod name
-MONGO_POD=$(kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
+MONGO_POD=$(kubectl get pod -l app=sparta-db -o jsonpath='{.items[0].metadata.name}')
 
 # Insert a test document
-kubectl exec -it $MONGO_POD -- mongo sparta --eval 'db.test.insert({status:"alive"})'
+kubectl exec -it $MONGO_POD -- mongosh --eval 'db.posts.insert({title:"Test Post", body:"This is a test post to verify data persistence"})'
 ```
 
 2. Delete the MongoDB pod to force a restart:
 
 ```bash
-kubectl delete pod -l app=mongo
+kubectl delete pod -l app=sparta-db
 ```
 
-The Deployment will start a new pod. When the new pod comes up, it will mount the same `/data/mongo` path.
+The Deployment will start a new pod. When the new pod comes up, it will mount the same `/data/mongodb` path.
 
 3. Check if the data persisted:
 
 ```bash
 # Get the new MongoDB pod name
-NEW_MONGO_POD=$(kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
+NEW_MONGO_POD=$(kubectl get pod -l app=sparta-db -o jsonpath='{.items[0].metadata.name}')
 
 # Query for the test document
-kubectl exec -it $NEW_MONGO_POD -- mongo sparta --eval 'db.test.find().pretty()'
+kubectl exec -it $NEW_MONGO_POD -- mongosh --eval 'db.posts.find().pretty()'
 ```
 
 You should see the document you inserted. This confirms that the data persisted across pod restarts because it was stored on the PV which outlived the first pod.
@@ -198,30 +209,42 @@ The concept, however, is that the PV is independent of the pod's lifecycle – "
 Let's simulate the scenario: remove the PVC but keep the PV (and data). Ensure the MongoDB pod is not running or using it first (you can scale down or delete the MongoDB deployment before this, so it releases the volume). Then:
 
 ```bash
-kubectl delete pvc mongo-pvc
+# Scale down the MongoDB deployment to ensure no pods are using the volume
+kubectl scale deployment sparta-db-deployment --replicas=0
+
+# Delete the PVC
+kubectl delete pvc sparta-db-pvc
 ```
 
 Now run:
 
 ```bash
-kubectl get pv mongo-pv
+kubectl get pv sparta-db-pv
 ```
 
 You will see its STATUS is "Released" (meaning it's no longer bound to a claim) and it is not available for another claim yet because the data might still be there and it's in Retain state. If you describe the PV, Kubernetes will note that manual intervention is needed to reuse it (you'd have to either wipe the data or manually clear the released condition).
 
 The important thing is the data on disk wasn't deleted when the PVC was deleted [3]. If we had set `reclaimPolicy: Delete`, then deleting the PVC would have also deleted the PV and, by extension, likely wiped the storage (e.g., deleted the cloud disk or removed the files for hostPath). Retain gives you the chance to recover data or rebind the PV later.
 
-For our project, we likely will keep the PVC around normally. The task "Removing PVC while retaining data in Persistent Volume" is likely a test to ensure you used Retain and understand the consequence. We demonstrated that.
-
 To make the PV available again, you could use:
 
 ```bash
-kubectl patch pv mongo-pv -p '{"spec":{"claimRef": null}}'
+kubectl patch pv sparta-db-pv -p '{"spec":{"claimRef": null}}'
 ```
 
-Then re-create a PVC to rebind. But be careful with that – data still corresponds to the old claim.
+Then re-create a PVC to rebind. In our project, we have a file `code/sparta-with-pv/pvc-recreate.yml` that can be used to create a new PVC that binds to the existing PV:
 
-In practice, if you delete a PVC accidentally but want to keep data, with Retain you can create a new PVC that manually binds to that PV (by name, like we did with volumeName earlier). So you can recover.
+```bash
+kubectl apply -f code/sparta-with-pv/pvc-recreate.yml
+```
+
+After recreating the PVC, you can scale the deployment back up:
+
+```bash
+kubectl scale deployment sparta-db-deployment --replicas=1
+```
+
+In practice, if you delete a PVC accidentally but want to keep data, with Retain you can create a new PVC that manually binds to that PV (by name, like we did with volumeName earlier). This allows you to recover your data.
 
 ## References
 

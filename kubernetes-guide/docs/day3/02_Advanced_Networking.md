@@ -12,19 +12,19 @@
 
 ## 3.2 Advanced Networking
 
-Now that we have our applications deployed on Minikube, we need to configure an Nginx reverse proxy on the VM to route external traffic to our services. This approach allows us to expose multiple applications through a single entry point (port 80) rather than requiring users to specify different ports.
+Now that we have our applications deployed on Minikube, we need to configure an Nginx reverse proxy on the VM to route external traffic to our services. This approach allows us to expose multiple applications through different entry points.
 
 ### Configuring Nginx Reverse Proxy
 
 We have two applications to expose:
-- Node.js app on NodePort 30002
-- Echo app on LoadBalancer IP
+- App1 on NodePort 30001
+- App3 (echoserver) on port 9000 via LoadBalancer
 
-We will configure Nginx (on the host VM, not the one in cluster) to listen on port 80 and proxy based on URL path:
-- `http://<VM IP>/node/*` → forwards to localhost:30002 (the NodePort of Node.js app)
-- `http://<VM IP>/echo/*` → forwards to the echo service
+We will configure Nginx (on the host VM, not the one in cluster) to listen on different ports:
+- `http://<VM IP>/` → forwards to 192.168.49.2:30001 (the NodePort of App1)
+- `http://<VM IP>:9000/` → forwards to kubernetes.docker.internal:9000 (the LoadBalancer service for App3)
 
-For the echo service, we'll use the LoadBalancer IP assigned by Minikube tunnel. After running `minikube tunnel`, the LoadBalancer IP (e.g., 10.96.0.200) becomes accessible on the host, so Nginx on the host can proxy to that IP.
+For the App3 service, we'll use the LoadBalancer IP assigned by Minikube tunnel. After running `minikube tunnel`, the LoadBalancer service becomes accessible, so Nginx on the host can proxy to that IP.
 
 **Steps to configure Nginx reverse proxy:**
 
@@ -38,7 +38,7 @@ Nginx will likely start automatically listening on port 80.
 
 2. **Configure Nginx**
 
-Edit the default site configuration:
+Create a configuration file:
 
 ```bash
 sudo nano /etc/nginx/sites-available/default
@@ -51,24 +51,23 @@ server {
     listen 80;
     server_name _;
 
-    location /node/ {
-        proxy_pass http://127.0.0.1:30002/;
-        # Strip the /node prefix when proxying
-        rewrite ^/node/(.*)$ /$1 break;
-        
-        # Standard proxy headers
+    location / {
+        proxy_pass http://192.168.49.2:30001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-    location /echo/ {
-        # Replace 10.96.0.200 with your actual LoadBalancer IP
-        proxy_pass http://10.96.0.200:8080/;
-        rewrite ^/echo/(.*)$ /$1 break;
-        
-        # Standard proxy headers
+server {
+    listen 9000;
+    server_name _;
+
+    location / {
+        # The proxy pass IP will be the external IP
+        # This will only work when minikube tunnel is running
+        proxy_pass http://kubernetes.docker.internal:9000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -77,9 +76,10 @@ server {
 }
 ```
 
-This configuration assumes:
-- The Node.js app is fine with or without the `/node` prefix (we strip it when proxying)
-- The echo server returns what you send and doesn't care about the path
+This configuration:
+- Routes all requests on port 80 to the App1 service running on NodePort 30001
+- Routes all requests on port 9000 to the App3 service via the LoadBalancer IP
+- The `kubernetes.docker.internal` hostname is used to access the Kubernetes cluster from the host when using Docker Desktop
 
 3. **Test and apply the Nginx configuration**
 
@@ -93,26 +93,26 @@ sudo systemctl restart nginx
 
 ```mermaid
 graph TD
-    A[External User] -->|http://VM_IP/node/| B[Nginx Reverse Proxy]
-    A -->|http://VM_IP/echo/| B
+    A[External User] -->|http://VM_IP/| B[Nginx Reverse Proxy Port 80]
+    A -->|http://VM_IP:9000/| C[Nginx Reverse Proxy Port 9000]
     
-    B -->|Proxy to localhost:30002| C[NodePort Service]
-    B -->|Proxy to LoadBalancer IP| D[LoadBalancer Service]
+    B -->|Proxy to 192.168.49.2:30001| D[NodePort Service App1]
+    C -->|Proxy to kubernetes.docker.internal:9000| E[LoadBalancer Service App3]
     
-    C -->|Routes to| E[Node.js Pods]
-    D -->|Routes to| F[Echo Server Pod]
+    D -->|Routes to| F[App1 Pods]
+    E -->|Routes to| G[App3 Pods]
     
-    G[minikube tunnel] -->|Creates route to| D
+    H[minikube tunnel] -->|Creates route to| E
 ```
 
 ### Testing the Setup
 
 From your local machine, you can now access the applications using the VM's public IP:
 
-- `http://<VM_PUBLIC_IP>/node/` → should reach the Node.js app
-- `http://<VM_PUBLIC_IP>/echo/` → should hit the echo server and return request details
+- `http://<VM_PUBLIC_IP>/` → should reach App1
+- `http://<VM_PUBLIC_IP>:9000/` → should hit the App3 echoserver and return request details
 
-This setup is essentially acting like an Ingress controller: Nginx is forwarding traffic to services based on the URL path. In a production environment, you might use a Kubernetes Ingress Controller inside the cluster instead of manually configuring Nginx on the host.
+This setup allows you to access both applications through different ports on the same VM.
 
 ### Minikube Networking Concepts
 
@@ -121,19 +121,19 @@ Important points to understand about Minikube networking:
 1. **NodePort Services**
    - A NodePort service is accessible via `NodeIP:NodePort`
    - In our VM, the NodeIP is typically 192.168.49.2 (Minikube's default VM IP)
-   - We use localhost in Nginx because we're on the same host
-   - From outside, you either open the NodePort directly or use a proxy (as we did)
+   - NodePort services are always accessible regardless of whether minikube tunnel is running
 
 2. **LoadBalancer Services with minikube tunnel**
    - Minikube allocates a pseudo-external IP and routes traffic from host to service
    - This simulates cloud LoadBalancers
    - The tunnel must run constantly for the IP to work
-   - Run with `sudo minikube tunnel` to allow binding to privileged ports
+   - Run with `minikube tunnel` to enable LoadBalancer services
 
 3. **Nginx as a Gateway**
-   - We funnel all traffic through Nginx on port 80, which is commonly open
-   - This is a common pattern in production: using a gateway like Nginx or HAProxy
-   - It allows for path-based routing without exposing multiple ports
+   - We use Nginx to route traffic to different services
+   - Port 80 routes to App1 (NodePort service)
+   - Port 9000 routes to App3 (LoadBalancer service)
+   - This allows for accessing multiple services through different ports
 
 ### Cleanup and Management
 
@@ -175,11 +175,40 @@ When you're done with your Minikube cluster, you can:
 
    This will try to start Minikube on boot. Make sure Docker is up before it runs (we specified `After=` and `Requires=docker.service`).
 
-   Note: `minikube start` might hang if run at boot without a TTY. If this happens, you might need to use cron with `@reboot` to run Minikube start instead.
+3. **Configure minikube tunnel to start on boot**
 
-3. **Test the auto-start configuration**
+   Create another systemd unit file:
+   ```bash
+   sudo nano /etc/systemd/system/minikube-tunnel.service
+   ```
+
+   Add the following content:
+   ```ini
+   [Unit]
+   Description=Minikube Tunnel
+   After=minikube.service
+   Requires=minikube.service
+
+   [Service]
+   User=root
+   ExecStart=/usr/local/bin/minikube tunnel
+   Restart=always
+   RestartSec=3
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   Enable the service:
+   ```bash
+   sudo systemctl enable minikube-tunnel.service
+   ```
+
+   This ensures that the tunnel starts after Minikube and restarts if it fails.
+
+4. **Test the auto-start configuration**
    
-   Reboot the VM and verify that Minikube starts automatically:
+   Reboot the VM and verify that Minikube and the tunnel start automatically:
    ```bash
    sudo reboot
    ```
@@ -189,10 +218,16 @@ When you're done with your Minikube cluster, you can:
    kubectl get nodes
    ```
 
+   And check if LoadBalancer services have external IPs:
+   ```bash
+   kubectl get svc -o wide
+   ```
+
 With everything running, we've successfully deployed our applications in the cloud:
-- Node.js + MongoDB with PV (100MB as specified) and HPA
-- Exposed via Nginx on port 80 so users can access without specifying a port
-- Verified that HPA works on the cloud VM cluster (you might need to enable metrics-server on Minikube: `minikube addons enable metrics-server`)
+- App1 accessible via port 80
+- App3 (echoserver) accessible via port 9000
+- Both services properly configured with Nginx reverse proxy
+- Automatic startup of Minikube and tunnel on system boot
 
 ## References
 

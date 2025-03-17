@@ -11,6 +11,13 @@ This guide provides a structured walkthrough of Kubernetes fundamentals and adva
 - Basic command-line knowledge
 - A text editor for YAML file creation
 
+## Project Structure
+
+The project is organized into two main directories:
+
+- `code/`: Contains all the Kubernetes YAML files, scripts, and application code
+- `docs/`: Contains the documentation explaining the concepts and implementations
+
 ## Table of Contents
 
 ### Day 1: Kubernetes Fundamentals
@@ -69,6 +76,41 @@ This guide provides a structured walkthrough of Kubernetes fundamentals and adva
    - LoadBalancer and NodePort services
    - Automating cluster startup
 
+### Additional Documentation
+1. [Minikube Tunnel Guide](app3/minikube-tunnel-guide.md)
+   - Understanding minikube tunnel
+   - Using LoadBalancer services locally
+   - Troubleshooting tunnel issues
+
+2. [Manual NPM Install Process](manual-npm-install-docs.md)
+   - Connecting to pods
+   - Running npm install manually
+   - Database seeding
+
+3. [Init Container Implementation](sparta-init-container-docs.md)
+   - Using init containers for dependencies
+   - Ensuring proper startup sequence
+
+## Applications in this Project
+
+The project includes several applications that demonstrate different Kubernetes concepts:
+
+1. **App1**: A simple Nginx deployment accessed via NodePort
+   - Located in `code/app1/`
+   - Demonstrates basic deployment and service concepts
+
+2. **App2**: Another web application using LoadBalancer service
+   - Located in `code/app2/`
+   - Demonstrates LoadBalancer service type
+
+3. **App3**: An echo server that returns request information
+   - Located in `code/app3/`
+   - Demonstrates LoadBalancer with minikube tunnel
+
+4. **Sparta App**: A Node.js application with MongoDB backend
+   - Located in `code/sparta/` and `code/sparta-with-pv/`
+   - Demonstrates multi-tier applications and persistent storage
+
 ## Architecture Overview
 
 ```mermaid
@@ -102,3 +144,21 @@ This guide includes:
 - Troubleshooting tips for common issues
 - Best practices for security and deployment
 - Architectural insights for scalable applications
+
+## Scripts and Utilities
+
+The `code/scripts/` directory contains various utility scripts to help with deployment and management:
+
+- `deploy-sparta.sh`: Deploys the Sparta application
+- `deploy-app1-app2.sh`: Deploys App1 and App2
+- `deploy-all-apps.sh`: Deploys all applications
+- `minikube-start.sh`: Starts Minikube with appropriate configuration
+- `sparta-connect.sh`: Connects to the Sparta app pod for manual operations
+
+## References
+
+For more information, refer to:
+- [Kubernetes Official Documentation](https://kubernetes.io/docs/home/)
+- [Kubernetes GitHub Repository](https://github.com/kubernetes/kubernetes)
+- [Kubernetes Community](https://kubernetes.io/community/)
+- [CNCF Landscape](https://landscape.cncf.io/)

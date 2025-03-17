@@ -44,15 +44,44 @@ The minikube tunnel command:
 
 In our setup:
 
-1. We use minikube tunnel to enable the LoadBalancer service for our hello-minikube app (App3)
+1. We use minikube tunnel to enable the LoadBalancer service for our App3 (hello-minikube echoserver)
 2. The tunnel assigns an external IP to the app3-service
-3. Our Nginx reverse proxy uses this IP to route traffic from `/hello` to the hello-minikube app
-4. This allows external access to the app through the Nginx reverse proxy
+3. Our Nginx reverse proxy uses this IP to route traffic from `/hello` to the App3 service
+4. This allows external access to the app through the Nginx reverse proxy at `http://<VM_IP>/hello`
+
+### Implementation Details
+
+Our deployment script (`code/app3/app3-deploy.sh`) performs the following steps:
+
+1. Deploys the App3 application using `app3-deploy.yml` and `app3-service.yml`
+2. Checks if minikube tunnel is running and starts it if needed:
+   ```bash
+   TUNNEL_RUNNING=$(pgrep -f 'minikube tunnel' || echo '')
+   if [ -z "$TUNNEL_RUNNING" ]; then
+       nohup minikube tunnel > minikube_tunnel.log 2>&1 &
+   fi
+   ```
+3. Waits for the LoadBalancer to get an external IP
+4. Updates the Nginx configuration to add a `/hello` location that proxies to the LoadBalancer IP:
+   ```nginx
+   location /hello {
+       proxy_pass http://<LOADBALANCER_IP>:8080;
+       proxy_set_header Host $host;
+       proxy_set_header X-Real-IP $remote_addr;
+       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+       proxy_set_header X-Forwarded-Proto $scheme;
+   }
+   ```
+
+This configuration allows users to access the App3 echoserver at `http://<VM_IP>/hello`.
 
 ## Best Practices
 
 1. **Run in Background**: Use `nohup minikube tunnel &` to run the tunnel in the background
-2. **Log Output**: Redirect output to a log file for troubleshooting
+2. **Log Output**: Redirect output to a log file for troubleshooting:
+   ```bash
+   nohup minikube tunnel > minikube_tunnel.log 2>&1 &
+   ```
 3. **Automatic Restart**: Consider setting up a systemd service to automatically restart the tunnel after system reboots
 4. **Cleanup**: Always terminate the tunnel process when it's no longer needed
 
@@ -79,6 +108,12 @@ In our setup:
    - Check if the correct ports are exposed
    - Ensure the application inside the pod is functioning correctly
 
+5. **Nginx Not Routing to App3**:
+   - Check the Nginx configuration in `/etc/nginx/sites-available/default`
+   - Verify that the `/hello` location is properly configured
+   - Ensure the LoadBalancer IP is correct in the proxy_pass directive
+   - Reload Nginx with `sudo systemctl reload nginx`
+
 ## Alternatives to Minikube Tunnel
 
 1. **NodePort Services**: Use NodePort instead of LoadBalancer (accessible via minikube IP and NodePort)
@@ -87,4 +122,4 @@ In our setup:
 
 ## Conclusion
 
-Minikube tunnel is an essential tool for local Kubernetes development when working with LoadBalancer services. It bridges the gap between local development and cloud deployment by simulating cloud provider load balancer functionality.
+Minikube tunnel is an essential tool for local Kubernetes development when working with LoadBalancer services. It bridges the gap between local development and cloud deployment by simulating cloud provider load balancer functionality. In our infrastructure, it enables the App3 echoserver to be accessible via Nginx at the `/hello` path.

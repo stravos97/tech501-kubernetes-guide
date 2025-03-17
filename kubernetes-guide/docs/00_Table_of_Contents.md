@@ -71,7 +71,56 @@ This document provides a complete table of contents for the Kubernetes guide, wi
 - [Minikube Networking Concepts](day3/02_Advanced_Networking.md#minikube-networking-concepts)
 - [Cleanup and Management](day3/02_Advanced_Networking.md#cleanup-and-management)
 
-## Additional Resources
+## Additional Documentation
+
+### [Minikube Tunnel Guide](app3/minikube-tunnel-guide.md)
+- [Overview](app3/minikube-tunnel-guide.md#overview)
+- [Why Use Minikube Tunnel?](app3/minikube-tunnel-guide.md#why-use-minikube-tunnel)
+- [How Minikube Tunnel Works](app3/minikube-tunnel-guide.md#how-minikube-tunnel-works)
+- [Technical Implementation](app3/minikube-tunnel-guide.md#technical-implementation)
+- [Usage in Our Infrastructure](app3/minikube-tunnel-guide.md#usage-in-our-infrastructure)
+- [Best Practices](app3/minikube-tunnel-guide.md#best-practices)
+- [Troubleshooting](app3/minikube-tunnel-guide.md#troubleshooting)
+- [Alternatives to Minikube Tunnel](app3/minikube-tunnel-guide.md#alternatives-to-minikube-tunnel)
+
+### [Manual NPM Install Process](manual-npm-install-docs.md)
+- [Background](manual-npm-install-docs.md#background)
+- [Why Manual Process?](manual-npm-install-docs.md#why-manual-process)
+- [How to Manually Install NPM Packages](manual-npm-install-docs.md#how-to-manually-install-npm-packages)
+- [Relationship with Init Containers](manual-npm-install-docs.md#relationship-with-init-containers)
+- [Troubleshooting](manual-npm-install-docs.md#troubleshooting)
+
+### [Init Container Implementation](sparta-init-container-docs.md)
+- [Problem Addressed](sparta-init-container-docs.md#problem-addressed)
+- [Solution Implemented](sparta-init-container-docs.md#solution-implemented)
+- [Technical Details](sparta-init-container-docs.md#technical-details)
+- [Benefits of This Approach](sparta-init-container-docs.md#benefits-of-this-approach)
+- [Relationship with Manual NPM Install Process](sparta-init-container-docs.md#relationship-with-manual-npm-install-process)
+- [Troubleshooting](sparta-init-container-docs.md#troubleshooting)
+
+## Applications in this Project
+
+### App1
+- Simple Nginx deployment accessed via NodePort
+- Located in `code/app1/`
+- Demonstrates basic deployment and service concepts
+
+### App2
+- Web application using LoadBalancer service
+- Located in `code/app2/`
+- Demonstrates LoadBalancer service type
+
+### App3
+- Echo server that returns request information
+- Located in `code/app3/`
+- Demonstrates LoadBalancer with minikube tunnel
+
+### Sparta App
+- Node.js application with MongoDB backend
+- Located in `code/sparta/` and `code/sparta-with-pv/`
+- Demonstrates multi-tier applications and persistent storage
+
+## References
 
 - [Kubernetes Official Documentation](https://kubernetes.io/docs/home/)
 - [Kubernetes GitHub Repository](https://github.com/kubernetes/kubernetes)
