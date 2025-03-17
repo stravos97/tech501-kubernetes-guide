@@ -39,9 +39,9 @@ ssh $REMOTE_SERVER "mkdir -p ~/sparta-app"
 echo "Copying Kubernetes manifests to remote server..."
 scp sparta-deploy.yml sparta-service.yml sparta-pv.yml sparta-hpa.yml load-test.yml minikube-startup.sh $REMOTE_SERVER:~/sparta-app/
 
-# Copy Nginx configuration
-echo "Copying Nginx configuration to remote server..."
-scp nginx-config $REMOTE_SERVER:~/sparta-app/
+# Copy Nginx configuration template
+echo "Copying Nginx configuration template to remote server..."
+scp nginx-config-template $REMOTE_SERVER:~/sparta-app/
 
 # Apply Kubernetes manifests on remote server
 echo "Applying Kubernetes manifests on remote server..."
@@ -85,6 +85,13 @@ ssh $REMOTE_SERVER "
     sudo apt-get install -y nginx
   fi
 
+  # Get Minikube IP for Nginx configuration
+  MINIKUBE_IP=\$(minikube ip)
+  echo \"Using Minikube IP: \${MINIKUBE_IP} for Nginx configuration\"
+  
+  # Process the Nginx config template with the actual Minikube IP
+  sed \"s/MINIKUBE_IP/\${MINIKUBE_IP}/g\" ~/sparta-app/nginx-config-template > ~/sparta-app/nginx-config
+  
   # Configure Nginx
   sudo cp ~/sparta-app/nginx-config /etc/nginx/sites-available/default
   sudo nginx -t && sudo systemctl restart nginx
