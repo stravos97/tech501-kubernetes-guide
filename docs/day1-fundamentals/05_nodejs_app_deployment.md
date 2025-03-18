@@ -48,15 +48,15 @@ spec:
         ports:
         - containerPort: 3000
         env:
-        - name: MONGO_URL
-          value: "mongodb://mongo-service:27017/sparta"
+        - name: DB_HOST
+          value: "mongodb://mongo-service:27017/posts"
 ```
 
 A few things to note:
 
 - We run 3 replicas of the Node app for high availability.
 - The container exposes port 3000. (Adjust this if your app uses a different port.)
-- We set an environment variable `MONGO_URL` (this name might differ based on how the app expects configuration; adapt to your app). In this example, the app will use the connection string `mongodb://mongo-service:27017/sparta`. Here, `mongo-service` will be the hostname of our MongoDB service within the cluster, port 27017 is the default MongoDB port, and "sparta" could be the database name. Alternatively, we might pass separate env vars like DB_HOST, DB_NAME, etc., depending on app design.
+- We set an environment variable `DB_HOST` (this name might differ based on how the app expects configuration; adapt to your app). In this example, the app will use the connection string `mongodb://mongo-service:27017/posts`. Here, `mongo-service` will be the hostname of our MongoDB service within the cluster, port 27017 is the default MongoDB port, and "posts" could be the database name. Alternatively, we might pass separate env vars like DB_HOST, DB_NAME, etc., depending on app design.
 
 ### Deploying and Verifying the Node App
 
@@ -142,10 +142,10 @@ spec:
         - containerPort: 27017
         env:
         - name: MONGO_INITDB_DATABASE
-          value: "sparta"
+          value: "posts"
 ```
 
-This will run a MongoDB container. We set `MONGO_INITDB_DATABASE` to "sparta" just as an example to automatically create a database on first run (the Sparta app might expect a certain DB to exist; this env var causes Mongo to create an initial DB by that name).
+This will run a MongoDB container. We set `MONGO_INITDB_DATABASE` to "posts" just as an example to automatically create a database on first run (the Sparta app might expect a certain DB to exist; this env var causes Mongo to create an initial DB by that name).
 
 We're not setting any root password or user here for simplicity (Mongo by default in dev mode will allow connections without auth inside the container). For a production-grade setup, you'd set `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD` env vars to enable authentication, and then your app would use credentials. But to keep things simple, we'll run it open (only accessible inside cluster anyway).
 
