@@ -141,7 +141,7 @@ function test_pv_pvc() {
   
   if [ "$create_data" = "y" ]; then
     echo "Creating test data automatically..."
-    kubectl exec -it $POD_NAME -- mongo --eval 'use posts; db.posts.insert({title: "Test Post", body: "This is a test post created at '$(date)'"}); db.posts.find();'
+    kubectl exec -it $POD_NAME -- mongosh --eval "use posts; db.posts.insert({title: \"Test Post\", body: \"This is a test post created at $(date)\"}); db.posts.find();"
   fi
   
   pause
@@ -191,7 +191,7 @@ function test_pv_pvc() {
   
   echo "New pod name: $NEW_POD_NAME"
   echo "You can manually verify the data using:"
-  echo "kubectl exec -it $NEW_POD_NAME -- mongo"
+  echo "kubectl exec -it $NEW_POD_NAME -- mongosh"
   echo "Then in the mongo shell:"
   echo "use posts"
   echo "db.posts.find()"
@@ -202,7 +202,7 @@ function test_pv_pvc() {
   
   if [ "$verify_data" = "y" ]; then
     echo "Verifying data automatically..."
-    kubectl exec -it $NEW_POD_NAME -- mongo --eval 'use posts; db.posts.find();'
+    kubectl exec -it $NEW_POD_NAME -- mongosh --eval "use posts; db.posts.find();"
   fi
 }
 
